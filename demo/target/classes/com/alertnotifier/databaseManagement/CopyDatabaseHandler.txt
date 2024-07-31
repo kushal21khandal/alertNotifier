@@ -1,0 +1,290 @@
+package com.alertnotifier.databaseManagement;
+
+import org.sqlite.*;
+import org.sqlite.core.*;
+
+import java.nio.*;
+
+import java.io.*;
+import java.nio.file.Paths;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.*;
+import java.sql.*;
+
+public class DatabaseHandler {
+    static String insertQuery = "INSERT INTO alerts(symbol,instrument_key,priceBelow,priceAbove,remarks) VALUES ( ? , ? , ? , ? , ?)";
+    static String instrumentKeys = "";
+
+    // here _ in instrument_key represents that the instrumentKey is a PRIMARY KEY
+    // of some another tables used here as a FOREIGN KEY
+    public static String getAbsolutePath(String resourcePath) {
+        URL url = DatabaseHandler.class.getClassLoader().getResource(resourcePath);
+        File file = null;
+        try {
+            file = Paths.get(url.toURI()).toFile();
+        } catch (URISyntaxException exception) {
+            exception.printStackTrace();
+        }
+        return file.getAbsolutePath();
+    }
+
+    public static InputStream getInputStream(String resourcePath){
+        InputStream inputStream = DatabaseHandler.class.getClassLoader().getResourceAsStream(resourcePath);
+        return inputStream;
+    }
+
+
+    public static Connection connectDatabase(String pathToDatabase) {
+        Connection conn = null;
+        try {
+            Class.forName("org.sqlite.JDBC");
+            Class.forName("org.slf4j.LoggerFactory");
+            conn = DriverManager.getConnection("jdbc:sqlite:" + pathToDatabase);
+
+            System.out.println("connected");
+        } catch (SQLException | ClassNotFoundException exception) {
+            System.out.println("" + exception);
+            exception.printStackTrace();
+        }
+        return conn;
+    }
+
+    public static String getInstrumentKey(Connection conn, String symbol) {
+        String instrument_key = null;
+        String selectQuery = "SELECT instrument_key FROM bse WHERE symbol = ?";
+        try {
+            PreparedStatement preparedStatement = conn.prepareStatement(selectQuery);
+            preparedStatement.setString(1, symbol);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                instrument_key = resultSet.getString("instrument_key");
+            }
+        } catch (SQLException exception) {
+            System.out.println("" + exception);
+            exception.printStackTrace();
+        }
+        return instrument_key;
+    }
+
+    public static void insertBulkData(Connection conn, String pathToDatabase, InputStream inputStreamBulkTextFile,
+            String pathToStocksVisitedTextFile) throws SQLException {
+        InputStreamReader inputStreamReader = null;
+        InputStreamReader inputStreamReaderBulkTextFile = null;
+        FileWriter fileWriter = null;
+
+        String symbol;
+        int priceBelow;
+        int priceAbove;
+        String remarks;
+        String instrument_key;
+
+        try {
+            inputStreamReaderBulkTextFile  = new InputStreamReader(inputStreamBulkTextFile);
+            inputStreamReader = new InputStreamReader(System.in);
+            fileWriter = new FileWriter(pathToStocksVisitedTextFile, true);
+            BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
+            BufferedReader bufferedFileReader = new BufferedReader(inputStreamReaderBulkTextFile);
+            BufferedReader bufferedInputStreamReader = new BufferedReader(inputStreamReader);
+
+            PreparedStatement preparedStatement = conn.prepareStatement(insertQuery);
+
+            while (true) {
+                symbol = bufferedFileReader.readLine();
+                if (symbol.isEmpty()) {
+                    break;
+                }
+                if (symbol.isBlank()) {
+                    continue;
+                }
+                System.out.printf("symbol : %s\n", symbol);
+
+                instrument_key = getInstrumentKey(conn, symbol);
+
+                System.out.print("price Below : ");
+                priceBelow = Integer.parseInt(bufferedInputStreamReader.readLine().trim());
+                if (priceBelow == 0) {
+                    System.out.println("SKIPPED\n");
+                    continue;
+                }
+                if (priceBelow == -1) {
+                    System.out.println("ABORTED\n");
+                    break;
+                }
+
+                System.out.print("price Above : ");
+                priceAbove = Integer.parseInt(bufferedInputStreamReader.readLine().trim());
+                System.out.print("remarks : ");
+                remarks = bufferedInputStreamReader.readLine().trim();
+                System.out.println();
+
+                preparedStatement.setString(1, symbol.trim());
+                preparedStatement.setString(2, instrument_key);
+                preparedStatement.setInt(3, priceBelow);
+                preparedStatement.setInt(4, priceAbove);
+                preparedStatement.setString(5, remarks.trim());
+
+                preparedStatement.executeUpdate();
+                bufferedWriter.write(symbol);
+                bufferedWriter.newLine();
+
+                System.out.println("----------------------------\n");
+
+            }
+            bufferedFileReader.close();
+            bufferedInputStreamReader.close();
+            bufferedWriter.close();
+
+        }
+
+        catch (IOException | SQLException exception) {
+            System.out.println("" + exception);
+            exception.printStackTrace();
+        } finally {
+            if (inputStreamReaderBulkTextFile != null) {
+                inputStreamReaderBulkTextFile = null;
+            }
+            if (inputStreamReader != null) {
+                inputStreamReader = null;
+            }
+
+            if (fileWriter != null) {
+                fileWriter = null;
+            }
+        }
+    }
+
+    public static void insertSingleData(Connection conn, String pathToDatabase) throws SQLException {
+        InputStreamReader inputStreamReader = null;
+        String symbol;
+        int priceBelow, priceAbove;
+        String remarks;
+
+        String instrument_key;
+
+        try {
+            inputStreamReader = new InputStreamReader(System.in);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            System.out.print("symbol : ");
+            symbol = bufferedReader.readLine().trim();
+
+            instrument_key = getInstrumentKey(conn, symbol);
+
+            System.out.print("price Below : ");
+            priceBelow = Integer.parseInt(bufferedReader.readLine().trim());
+            System.out.print("price Above : ");
+            priceAbove = Integer.parseInt(bufferedReader.readLine().trim());
+            System.out.print("remarks : ");
+            remarks = bufferedReader.readLine().trim();
+            PreparedStatement preparedStatement = conn.prepareStatement(insertQuery);
+            preparedStatement.setString(1, symbol.trim());
+            preparedStatement.setString(2, instrument_key);
+            preparedStatement.setInt(3, priceBelow);
+            preparedStatement.setInt(4, priceAbove);
+            preparedStatement.setString(5, remarks);
+            preparedStatement.executeUpdate();
+
+            System.out.println("successfully added");
+
+            bufferedReader.close();
+        } catch (IOException | SQLException exception) {
+            System.out.println("" + exception);
+            exception.printStackTrace();
+        } finally {
+            if (inputStreamReader != null) {
+                inputStreamReader = null;
+            }
+        }
+    }
+
+    public static void updateData(Connection conn, String pathToDatabase, String symbol) throws SQLException {
+        String updateQuery = "UPDATE alerts SET priceBelow = ? , priceAbove = ? , remarks = ? WHERE symbol = " + symbol;
+
+        InputStreamReader inputStreamReader = null;
+        int priceBelow, priceAbove;
+        String remarks;
+
+        try {
+            inputStreamReader = new InputStreamReader(System.in);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            System.out.print("price Below : ");
+            priceBelow = Integer.parseInt(bufferedReader.readLine().trim());
+            System.out.print("price Above : ");
+            priceAbove = Integer.parseInt(bufferedReader.readLine().trim());
+            System.out.print("remarks : ");
+            remarks = bufferedReader.readLine().trim();
+            PreparedStatement preparedStatement = conn.prepareStatement(updateQuery);
+            preparedStatement.setInt(1, priceBelow);
+            preparedStatement.setInt(2, priceAbove);
+            preparedStatement.setString(3, remarks);
+            preparedStatement.executeUpdate();
+
+            System.out.println("successfully updated");
+
+            bufferedReader.close();
+        } catch (IOException | SQLException exception) {
+            System.out.println("" + exception);
+            exception.printStackTrace();
+        } finally {
+            if (inputStreamReader != null) {
+                inputStreamReader = null;
+            }
+        }
+    }
+
+    public static String fetchIntrumentKeysFromAlerts(Connection conn){
+        StringBuilder stringBuilder = new StringBuilder();
+        String query = "SELECT instrument_key FROM alerts";
+        try{
+            Statement statement = conn.createStatement();
+            ResultSet resultSet = statement.executeQuery(query);
+            while(resultSet.next()){
+                if(resultSet.isFirst()){
+                    stringBuilder.append(resultSet.getString("instrument_key") + ",");
+                }
+                else{
+                    stringBuilder.append(","+resultSet.getString("instrument_key"));
+                }
+            }
+        }
+        catch(SQLException exception){
+            exception.printStackTrace();
+        }
+        return stringBuilder.toString();
+    }
+
+    public static String getInstrumentKeys(){
+        return instrumentKeys;
+    }
+    public static boolean isOutOfPriceRange(String instrument_token , String last_price ){
+        String query = "SELECT priceBelow , priceAbove FROM alerts WHERE instrument_key = ?";
+
+
+    }
+    public static void main(String[] args) {
+
+        // String pathToDatabase = getClass().getResourceAsStream("/scripts.db");
+        // String pathToBulkTextFile = System.getProperty("user.dir") + "/" + "stockMarketAlertsNotifier" + "/"
+        //         + "stocks.txt";
+
+        // String pathToStocksVisitedTextFile = System.getProperty("user.dir") + "/" + "stockMarketAlertsNotifier" + "/"
+        //         + "stocks_added_to_database.txt";
+
+        // System.out.println(pathToDatabase);
+        // System.out.println(pathToBulkTextFile);
+        // System.out.println(pathToStocksVisitedTextFile);
+
+        String pathToDatabase = DatabaseHandler.getAbsolutePath("/resources/scrips.db");
+        InputStream stocksList = DatabaseHandler.getInputStream("/resources/stocks.txt");
+        String pathToAddedStocksList = DatabaseHandler.getAbsolutePath("/resources/stocksAddedToDatabase.txt");
+
+        Connection conn = null;
+        try {
+            conn = connectDatabase(pathToDatabase);
+            conn.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+}

@@ -1,0 +1,18 @@
+
+        String instrumentKeys = readInstrumentKeyAlertsTextFile(
+                "/mnt/D/ML_SRM/solutions_python_crashC/stockMarketAlertsNotifier/instrumentKeyAlerts.txt");
+        String jsonString;
+        HttpResponse<String> response;
+
+        while (true) {
+            // response = Unirest.get("https://api.upstox.com/v2/market-quote/ltp")
+            //         .header("Accept", "application/json")
+            //         .header("Authorization",
+            //                 "Bearer eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiI0VkFVVFMiLCJqdGkiOiI2NjZiYzY2M2MxNmExNTBmNjBmNzI2ZmQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaWF0IjoxNzE4MzM5MTcxLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3MTg0MDI0MDB9.61Nt3G5vk_cIq16HyVIwujvrg0Zt9gNWzMqsgpN5h-I")
+            //         .queryString("instrument_key", instrumentKeys).asString();
+
+            // System.out.println(response.getBody());
+
+            // jsonString = response.getBody();
+
+        }

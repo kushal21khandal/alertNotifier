@@ -1,0 +1,5 @@
+[DONE]add delay 10s
+
+to-do:
+bug-fix : memory leak
+remove priceAbove from the database;
