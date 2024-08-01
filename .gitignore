@@ -1,5 +1,12 @@
 # Compiled class file
 *.class
+*.txt
+
+demo/src/main/java/com/alertnotifier/extras
+demo/src/main/java/com/alertnotifier/jsonResponse
+demo/src/main/resources
+demo/target
+
 
 # Log file
 *.log
@@ -22,3 +29,4 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+/
