@@ -3,14 +3,10 @@ package com.alertnotifier;
 
 import java.util.regex.*;
 import com.alertnotifier.databaseManagement.DatabaseMain;
-import com.alertnotifier.jsonResponse.ResponseJsonMain;
-import com.alertnotifier.jsonResponse.Symbol;
 
 import kong.unirest.core.Unirest;
 import kong.unirest.core.*;
 import java.io.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Main {
 
@@ -58,7 +54,7 @@ public class Main {
         // Pattern pattern = Pattern.compile("(BSE:\\w+)\\D+(\\d+)\\D+(IN\\d+)");
         Pattern pattern = Pattern.compile("(BSE_EQ:\\w+)\\D+(\\d+.?\\d+)\\D+(INE(\\d+|\\w+)+)");
         Matcher matcher;
-        String symbol , ltp , instrument_token;
+        String symbol, ltp, instrument_token;
 
         String access_token = getAccessToken();
         System.out.println("symbol\t\t\tltp\tpriceBelow\tpriceAbove\tremarks");
@@ -74,13 +70,16 @@ public class Main {
             try {
 
                 matcher = pattern.matcher(jsonString);
-                symbol = matcher.group(1);
-                ltp = matcher.group(2);
-                instrument_token = matcher.group(3);
 
-                while(matcher.find()){
-                    if(DatabaseMain.checkOutOfPriceRange(ltp , symbol)){
-                        instrumentKeys = instrumentKeys.replaceFirst("," + instrument_token + "|" + instrument_token + "," , "");
+                while (matcher.find()) {
+
+                    symbol = matcher.group(1);
+                    ltp = matcher.group(2);
+                    instrument_token = matcher.group(3);
+
+                    if (DatabaseMain.checkOutOfPriceRange(ltp, symbol)) {
+                        instrumentKeys = instrumentKeys
+                                .replaceFirst("," + instrument_token + "|" + instrument_token + ",", "");
                     }
                 }
 
